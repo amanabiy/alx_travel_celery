@@ -1,0 +1,37 @@
+version: '3.8'
+
+services:
+  redis:
+    image: redis:alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+
+  web:
+    build: .
+    depends_on:
+      - redis
+    volumes:
+      - .:/app
+    ports:
+      - "8001:8001"
+    environment:
+      - DJANGO_SETTINGS_MODULE=travel.settings
+    command: >
+      sh -c "python manage.py migrate &&
+             python manage.py runserver 0.0.0.0:8001"
+
+  worker:
+    build: .
+    depends_on:
+      - redis
+      - web
+    volumes:
+      - .:/app
+    environment:
+      - DJANGO_SETTINGS_MODULE=travel.settings
+    command: celery -A travel worker --loglevel=info
+
+volumes:
+  redis_data:
